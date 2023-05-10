@@ -408,7 +408,7 @@ class GeneradorPlanillaFinanzas:
         facturas_con_maestro_articulos = pd.merge(
             tmp,
             df_maestro_art,
-            how="inner",
+            how="left",
             left_on="Codigo_Articulo_SCI",
             right_on="Código_MAESTRO_ARTICULOS",
         )
@@ -431,7 +431,7 @@ class GeneradorPlanillaFinanzas:
         facturas_con_ley_presupuesto = pd.merge(
             tmp,
             ley_presupuesto,
-            how="inner",
+            how="left",
             left_on="Items_MAESTRO_ARTICULOS",
             right_on="Numero_Concepto_LEY_PRESUPUESTO",
         )
