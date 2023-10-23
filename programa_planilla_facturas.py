@@ -218,6 +218,8 @@ class GeneradorPlanillaFinanzas:
             df_sumada.loc[mask_negativas, columnas_negativas] * -1
         )
 
+        print(f">>> Existen {df_sumada.shape[0]} documentos en total en SII.")
+
         return df_sumada
 
     def leer_turbo(self, lista_archivos):
