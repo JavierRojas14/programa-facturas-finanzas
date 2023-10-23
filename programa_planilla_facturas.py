@@ -269,7 +269,7 @@ class GeneradorPlanillaFinanzas:
         return df_sumada
 
     def leer_ley_de_presupuestos(self, lista_archivos):
-        dfs = map(lambda x: pd.read_excel(x), lista_archivos)
+        dfs = map(pd.read_excel, lista_archivos)
         df_sumada = pd.concat(dfs)
 
         return df_sumada
