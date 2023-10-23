@@ -303,13 +303,17 @@ class GeneradorPlanillaFinanzas:
         print("Calculando los 8 días de las facturas!")
         mask_no_devengadas = pd.isna(df_unida["Fecha_DEVENGO_SIGFE"])
 
-        df_unida["Fecha_Docto_SII"] = pd.to_datetime(df_unida["Fecha_Docto_SII"], dayfirst=True)
-
-        df_unida["Fecha_Recepcion_SII"] = pd.to_datetime(
-            df_unida["Fecha_Recepcion_SII"], dayfirst=True
+        df_unida["Fecha_Docto_SII"] = pd.to_datetime(
+            df_unida["Fecha_Docto_SII"], dayfirst=True, format="mixed"
         )
 
-        df_unida["Fecha_Reclamo_SII"] = pd.to_datetime(df_unida["Fecha_Reclamo_SII"], dayfirst=True)
+        df_unida["Fecha_Recepcion_SII"] = pd.to_datetime(
+            df_unida["Fecha_Recepcion_SII"], dayfirst=True, format="mixed"
+        )
+
+        df_unida["Fecha_Reclamo_SII"] = pd.to_datetime(
+            df_unida["Fecha_Reclamo_SII"], dayfirst=True, format="mixed"
+        )
 
         diferencia = (
             pd.to_datetime("today") - df_unida[mask_no_devengadas]["Fecha_Recepcion_SII"]
@@ -344,7 +348,6 @@ class GeneradorPlanillaFinanzas:
 
         for referencia in df_izquierda["LLAVES_REFERENCIAS_PARA_NC"].unique():
             if not isinstance(referencia, float):
-
                 nota_c = df_izquierda.query("LLAVES_REFERENCIAS_PARA_NC == @referencia").index[0]
                 nota_c = nota_c.split("-")[1][1:]
                 nota_c = f"NC {nota_c}"
@@ -378,9 +381,9 @@ class GeneradorPlanillaFinanzas:
         # oc_pendientes_subt_22 = oc_pendientes[mask_subtitulo_22]
 
         print("Asociando Órdenes de Compra!")
+        df_junta["Concepto_Presupuesto_OC"] = ""
         for orden_compra in oc_sigfe["Número Documento"].unique():
             if not (orden_compra in ["2022", "2"]):
-
                 mask_oc_sigfe = oc_sigfe["Número Documento"] == orden_compra
                 datos_oc = oc_sigfe[mask_oc_sigfe]
                 monto_disponible = datos_oc["Monto Disponible"].iloc[0]
