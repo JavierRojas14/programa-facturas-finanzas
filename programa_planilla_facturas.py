@@ -284,7 +284,7 @@ class GeneradorPlanillaFinanzas:
         - El orden en que se agregan las bases de datos es: SII -> ACEPTA -> OBSERVACIONES -> SCI
         -> SIGFE -> TURBO
         """
-        print("\nUniendo todas las bases de dato!")
+        print("\nUniendo todas las bases de datos!")
         df_sii = diccionario_dfs_limpias.pop("SII")
         lista_dfs_secuenciales = list(diccionario_dfs_limpias.values())
 
