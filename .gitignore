@@ -132,3 +132,5 @@ crudos/
 settings.json
 
 *.csv
+*.xlsx
+*.xls
