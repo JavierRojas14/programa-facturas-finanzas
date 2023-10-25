@@ -11,6 +11,30 @@ import pandas as pd
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
+COLUMNAS_ACEPTA = [
+    "emisor",
+    "folio",
+    "publicacion",
+    "estado_acepta",
+    "estado_sii",
+    "estado_nar",
+    "estado_devengo",
+    "folio_oc",
+    "folio_rc",
+    "fecha_ingreso_rc",
+    "folio_sigfe",
+    "tarea_actual",
+    "estado_cesion",
+]
+
+TIPOS_DATOS_ACEPTA = {
+    "estado_nar": str,
+    "estado_devengo": str,
+    "folio_rc": str,
+    "fecha_ingreso_rc": str,
+    "tarea_actual": str,
+}
+
 
 class GeneradorPlanillaFinanzas:
     """
@@ -96,7 +120,7 @@ class GeneradorPlanillaFinanzas:
         for base_de_datos, lista_archivos in archivos_a_leer.items():
             print(f"Leyendo {base_de_datos}")
             if base_de_datos == "ACEPTA":
-                df_sumada = self.leer_acepta(lista_archivos)
+                df_sumada = self.leer_acepta()
 
             elif base_de_datos == "OBSERVACIONES":
                 df_sumada = self.leer_observaciones(lista_archivos)
@@ -129,12 +153,16 @@ class GeneradorPlanillaFinanzas:
 
         return diccionario_base_de_datos
 
-    def leer_acepta(self, lista_archivos):
-        dfs = map(pd.read_excel, lista_archivos)
-        df_sumada = pd.concat(dfs)
-        df_sumada = df_sumada.rename(columns={"emisor": "RUT Emisor", "folio": "Folio"})
+    def leer_acepta(self):
+        acepta_unido = pd.concat(
+            (
+                pd.read_excel(archivo, usecols=COLUMNAS_ACEPTA, dtype=TIPOS_DATOS_ACEPTA)
+                for archivo in glob.glob("crudos/base_de_datos_facturas/ACEPTA/*.xls")
+            )
+        )
+        acepta_unido = acepta_unido.rename(columns={"emisor": "RUT Emisor", "folio": "Folio"})
 
-        return df_sumada
+        return acepta_unido
 
     def leer_observaciones(self, lista_archivos):
         dfs = map(lambda x: pd.read_csv(x, encoding="utf-8", delimiter=";"), lista_archivos)
