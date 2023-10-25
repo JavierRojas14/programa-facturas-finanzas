@@ -134,3 +134,4 @@ settings.json
 *.csv
 *.xlsx
 *.xls
+.DS_Store
