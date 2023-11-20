@@ -18,6 +18,7 @@ COLUMNAS_ACEPTA = [
     "publicacion",
     "estado_acepta",
     "estado_sii",
+    "referencias",
     "estado_nar",
     "estado_devengo",
     "folio_oc",
