@@ -9,8 +9,51 @@ import os
 import glob
 
 import pandas as pd
+import numpy as np
 
 pd.options.mode.chained_assignment = None  # default='warn'
+
+COLUMNAS_SII_REGISTRO_O_NO_INCLUIR = {
+    "Tipo Doc": int,
+    "RUT Proveedor": str,
+    "Razon Social": str,
+    "Folio": int,
+    "Fecha Docto": str,
+    "Fecha Recepcion": str,
+    "Fecha Acuse": str,
+    "Monto Exento": float,
+    "Monto Neto": float,
+    "Monto IVA Recuperable": float,
+    "Monto Total": float,
+}
+
+COLUMNAS_SII_PENDIENTES = {
+    "Tipo Doc": int,
+    "RUT Proveedor": str,
+    "Razon Social": str,
+    "Folio": int,
+    "Fecha Docto": str,
+    "Fecha Recepcion": str,
+    "Monto Exento": float,
+    "Monto Neto": float,
+    "Monto IVA Recuperable": float,
+    "Monto Total": float,
+}
+
+COLUMNAS_SII_RECLAMADAS = {
+    "Tipo Doc": int,
+    "RUT Proveedor": str,
+    "Razon Social": str,
+    "Folio": int,
+    "Fecha Docto": str,
+    "Fecha Recepcion": str,
+    "Fecha Reclamo": str,
+    "Monto Exento": float,
+    "Monto Neto": float,
+    "Monto IVA Recuperable": float,
+    "Monto Total": float,
+}
+
 
 COLUMNAS_ACEPTA = [
     "emisor",
@@ -135,7 +178,7 @@ class GeneradorPlanillaFinanzas:
                 df_sumada = self.leer_sigfe(lista_archivos)
 
             elif base_de_datos == "SII":
-                df_sumada = self.leer_sii(lista_archivos)
+                df_sumada = self.leer_sii()
 
             elif base_de_datos == "TURBO":
                 df_sumada = self.leer_turbo(lista_archivos)
@@ -231,22 +274,56 @@ class GeneradorPlanillaFinanzas:
 
         return df_sumada
 
-    def leer_sii(self, lista_archivos):
-        dfs = map(lambda x: pd.read_csv(x, delimiter=";", index_col=False), lista_archivos)
-
-        dfs = map(
-            lambda x: x.drop(columns=["Tabacos Puros", "Tabacos Cigarrillos", "Tabacos Elaborados"])
-            if len(x.columns) == 27
-            else x,
-            dfs,
+    def lector_csv_sii(self, archivo, tipo_datos):
+        return pd.read_csv(
+            archivo,
+            delimiter=";",
+            index_col=False,
+            usecols=list(tipo_datos.keys()),
+            dtype=tipo_datos,
         )
 
-        df_sumada = pd.concat(dfs).rename(columns={"RUT Proveedor": "RUT Emisor"})
-        mask_negativas = (df_sumada["Tipo Doc"] == 61) | (df_sumada["Tipo Doc"] == 56)
-        columnas_negativas = ["Monto Exento", "Monto Neto", "Monto IVA Recuperable", "Monto Total"]
+    def leer_sii(self):
+        # Define ruta de archivos a leer
+        registro = glob.glob("crudos/base_de_datos_facturas/SII/*REGISTRO*.csv")
+        no_incluir = glob.glob("crudos/base_de_datos_facturas/SII/*NO_INCLUIR*.csv")
+        pendientes = glob.glob("crudos/base_de_datos_facturas/SII/*PENDIENTE*.csv")
+        reclamados = glob.glob("crudos/base_de_datos_facturas/SII/*RECLAMADO*.csv")
 
-        df_sumada.loc[mask_negativas, columnas_negativas] = (
-            df_sumada.loc[mask_negativas, columnas_negativas] * -1
+        # Renombra Fecha Acuse a Fecha de Reclamo (6 de ~74000 documentos tienen registros)
+        df_registro = (
+            self.lector_csv_sii(archivo, COLUMNAS_SII_REGISTRO_O_NO_INCLUIR) for archivo in registro
+        )
+        df_registro = pd.concat(df_registro).rename(columns={"Fecha Acuse": "Fecha Reclamo"})
+
+        # Renombra Fecha Acuse a Fecha de Reclamo (Ninguna tiene un valor)
+        df_no_incluir = (
+            self.lector_csv_sii(archivo, COLUMNAS_SII_REGISTRO_O_NO_INCLUIR)
+            for archivo in no_incluir
+        )
+        df_no_incluir = pd.concat(df_no_incluir).rename(columns={"Fecha Acuse": "Fecha Reclamo"})
+
+        # Agrega la columna Fecha de Reclamo para alinear dfs
+        df_pendientes = (
+            self.lector_csv_sii(archivo, COLUMNAS_SII_PENDIENTES) for archivo in pendientes
+        )
+        df_pendientes = pd.concat(df_pendientes).insert(8, "Fecha Reclamo", np.nan)
+
+        # Se mantiene el archivo como esta
+        df_reclamados = (
+            self.lector_csv_sii(archivo, COLUMNAS_SII_RECLAMADAS) for archivo in reclamados
+        )
+        df_reclamados = pd.concat(df_reclamados)
+
+        # Une todos los tipos de documentos luego de alinear todos los dfs
+        df_sumada = pd.concat([df_registro, df_no_incluir, df_pendientes, df_reclamados])
+        df_sumada = df_sumada.rename(columns={"RUT Proveedor": "RUT Emisor"})
+
+        # Pone Notas de Credito/Debido en negativo
+        COLUMNAS_NEGATIVAS = ["Monto Exento", "Monto Neto", "Monto IVA Recuperable", "Monto Total"]
+        mask_negativas = (df_sumada["Tipo Doc"] == 61) | (df_sumada["Tipo Doc"] == 56)
+        df_sumada.loc[mask_negativas, COLUMNAS_NEGATIVAS] = (
+            df_sumada.loc[mask_negativas, COLUMNAS_NEGATIVAS] * -1
         )
 
         return df_sumada
