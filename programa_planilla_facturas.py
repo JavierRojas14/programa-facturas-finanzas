@@ -21,10 +21,10 @@ COLUMNAS_SII_REGISTRO_O_NO_INCLUIR = {
     "Fecha Docto": str,
     "Fecha Recepcion": str,
     "Fecha Acuse": str,
-    "Monto Exento": float,
-    "Monto Neto": float,
-    "Monto IVA Recuperable": float,
-    "Monto Total": float,
+    "Monto Exento": "Int64",
+    "Monto Neto": "Int64",
+    "Monto IVA Recuperable": "Int64",
+    "Monto Total": "Int64",
 }
 
 COLUMNAS_SII_PENDIENTES = {
@@ -34,10 +34,10 @@ COLUMNAS_SII_PENDIENTES = {
     "Folio": int,
     "Fecha Docto": str,
     "Fecha Recepcion": str,
-    "Monto Exento": float,
-    "Monto Neto": float,
-    "Monto IVA Recuperable": float,
-    "Monto Total": float,
+    "Monto Exento": "Int64",
+    "Monto Neto": "Int64",
+    "Monto IVA Recuperable": "Int64",
+    "Monto Total": "Int64",
 }
 
 COLUMNAS_SII_RECLAMADAS = {
@@ -48,10 +48,10 @@ COLUMNAS_SII_RECLAMADAS = {
     "Fecha Docto": str,
     "Fecha Recepcion": str,
     "Fecha Reclamo": str,
-    "Monto Exento": float,
-    "Monto Neto": float,
-    "Monto IVA Recuperable": float,
-    "Monto Total": float,
+    "Monto Exento": "Int64",
+    "Monto Neto": "Int64",
+    "Monto IVA Recuperable": "Int64",
+    "Monto Total": "Int64",
 }
 
 
