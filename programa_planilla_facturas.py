@@ -92,6 +92,7 @@ class GeneradorPlanillaFinanzas:
         )
 
         self.guardar_dfs(facturas_con_columnas_necesarias, leer)
+        print(f"La planilla final tiene {facturas_con_columnas_necesarias.shape[0]} documentos.")
 
         print("\nListo! No hubo ningún problema")
         print(f"--- {round(time.time() - start_time, 1)} seconds ---")
