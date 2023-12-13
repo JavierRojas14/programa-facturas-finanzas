@@ -179,6 +179,7 @@ class GeneradorPlanillaFinanzas:
 
             elif base_de_datos == "SII":
                 df_sumada = self.leer_sii()
+                print(df_sumada.shape)
 
             elif base_de_datos == "TURBO":
                 df_sumada = self.leer_turbo(lista_archivos)
@@ -295,6 +296,7 @@ class GeneradorPlanillaFinanzas:
             self.lector_csv_sii(archivo, COLUMNAS_SII_REGISTRO_O_NO_INCLUIR) for archivo in registro
         )
         df_registro = pd.concat(df_registro).rename(columns={"Fecha Acuse": "Fecha Reclamo"})
+        # df_registro["tipo"] = "registro"
 
         # Renombra Fecha Acuse a Fecha de Reclamo (Ninguna tiene un valor)
         df_no_incluir = (
@@ -302,29 +304,37 @@ class GeneradorPlanillaFinanzas:
             for archivo in no_incluir
         )
         df_no_incluir = pd.concat(df_no_incluir).rename(columns={"Fecha Acuse": "Fecha Reclamo"})
+        # df_no_incluir["tipo"] = "no_incluir"
 
         # Agrega la columna Fecha de Reclamo para alinear dfs
         df_pendientes = (
             self.lector_csv_sii(archivo, COLUMNAS_SII_PENDIENTES) for archivo in pendientes
         )
-        df_pendientes = pd.concat(df_pendientes).insert(8, "Fecha Reclamo", np.nan)
+        df_pendientes = pd.concat(df_pendientes)
+        df_pendientes.insert(8, "Fecha Reclamo", np.nan)
+        # df_pendientes["tipo"] = "pendientes"
 
         # Se mantiene el archivo como esta
         df_reclamados = (
             self.lector_csv_sii(archivo, COLUMNAS_SII_RECLAMADAS) for archivo in reclamados
         )
         df_reclamados = pd.concat(df_reclamados)
+        # df_reclamados["tipo"] = "reclamados"
 
         # Une todos los tipos de documentos luego de alinear todos los dfs
         df_sumada = pd.concat([df_registro, df_no_incluir, df_pendientes, df_reclamados])
         df_sumada = df_sumada.rename(columns={"RUT Proveedor": "RUT Emisor"})
 
-        # Pone Notas de Credito/Debido en negativo
+        # Pone Notas de Credito/Debito en negativo
         COLUMNAS_NEGATIVAS = ["Monto Exento", "Monto Neto", "Monto IVA Recuperable", "Monto Total"]
         mask_negativas = (df_sumada["Tipo Doc"] == 61) | (df_sumada["Tipo Doc"] == 56)
         df_sumada.loc[mask_negativas, COLUMNAS_NEGATIVAS] = (
             df_sumada.loc[mask_negativas, COLUMNAS_NEGATIVAS] * -1
         )
+
+        # Elimina documentos duplicados con mismo tipo de doc, rut y folio (casos de facturas en
+        # pendientes y registro)
+        df_sumada = df_sumada.drop_duplicates(subset=["Tipo Doc", "RUT Emisor", "Folio"])
 
         return df_sumada
 
