@@ -56,6 +56,7 @@ COLUMNAS_SII_RECLAMADAS = {
 
 
 COLUMNAS_ACEPTA = {
+    "tipo": int,
     "folio": int,
     "emisor": str,
     "publicacion": str,
