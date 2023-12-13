@@ -55,29 +55,21 @@ COLUMNAS_SII_RECLAMADAS = {
 }
 
 
-COLUMNAS_ACEPTA = [
-    "emisor",
-    "folio",
-    "publicacion",
-    "estado_acepta",
-    "estado_sii",
-    "referencias",
-    "estado_nar",
-    "estado_devengo",
-    "folio_oc",
-    "folio_rc",
-    "fecha_ingreso_rc",
-    "folio_sigfe",
-    "tarea_actual",
-    "estado_cesion",
-]
-
-TIPOS_DATOS_ACEPTA = {
+COLUMNAS_ACEPTA = {
+    "folio": int,
+    "emisor": str,
+    "publicacion": str,
+    "estado_acepta": str,
+    "estado_sii": str,
+    "referencias": str,
     "estado_nar": str,
     "estado_devengo": str,
+    "folio_oc": str,
     "folio_rc": str,
     "fecha_ingreso_rc": str,
+    "folio_sigfe": "Int64",
     "tarea_actual": str,
+    "estado_cesion": str,
 }
 
 
@@ -203,7 +195,7 @@ class GeneradorPlanillaFinanzas:
     def leer_acepta(self):
         acepta_unido = pd.concat(
             (
-                pd.read_excel(archivo, usecols=COLUMNAS_ACEPTA, dtype=TIPOS_DATOS_ACEPTA)
+                pd.read_excel(archivo, usecols=list(COLUMNAS_ACEPTA.keys()), dtype=COLUMNAS_ACEPTA)
                 for archivo in glob.glob("crudos/base_de_datos_facturas/ACEPTA/*.xls")
             )
         )
