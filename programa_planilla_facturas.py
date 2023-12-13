@@ -179,7 +179,7 @@ class GeneradorPlanillaFinanzas:
 
             elif base_de_datos == "SII":
                 df_sumada = self.leer_sii()
-                print(df_sumada.shape)
+                print(f"\nSII tiene {df_sumada.shape[0]} documentos totales\n")
 
             elif base_de_datos == "TURBO":
                 df_sumada = self.leer_turbo(lista_archivos)
