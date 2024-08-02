@@ -124,8 +124,12 @@ class GeneradorPlanillaFinanzas:
         facturas_con_ley_presupuesto = self.asociar_ley_presupuesto(
             facturas_con_maestro_articulos, articulos["LEY_PRESUPUESTOS"]
         )
-        facturas_con_columnas_necesarias = self.obtener_columnas_necesarias(
+        facturas_con_mismo_monto_sii = self.tienen_el_mismo_monto_sii_y_turbo(
             facturas_con_ley_presupuesto
+        )
+
+        facturas_con_columnas_necesarias = self.obtener_columnas_necesarias(
+            facturas_con_mismo_monto_sii
         )
 
         self.guardar_dfs(facturas_con_columnas_necesarias, leer)
@@ -556,6 +560,15 @@ class GeneradorPlanillaFinanzas:
 
         return facturas_con_ley_presupuesto
 
+    def tienen_el_mismo_monto_sii_y_turbo(self, df_junta):
+        print("Viendo si los montos de SII y TURBO coinciden...")
+        tmp = df_junta.copy()
+
+        # Indica si los montos totales de SII y TURBO (bodega) coinciden
+        tmp["monto_sii_y_turbo_coinciden"] = tmp["Monto_Total_SII"] == tmp["Monto_TURBO"]
+
+        return tmp
+
     def obtener_columnas_necesarias(self, df_izquierda):
         """
         Esta función selecciona sólo las columnas necesarias en el fomrato final para
@@ -618,6 +631,7 @@ class GeneradorPlanillaFinanzas:
             "Monto_TURBO",
             "tiempo_diferencia_SII",
             "esta_al_dia",
+            "monto_sii_y_turbo_coinciden",
             "REFERENCIAS",
             "OBSERVACION_OBSERVACIONES",
         ]
