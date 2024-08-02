@@ -614,6 +614,7 @@ class GeneradorPlanillaFinanzas:
             "NºPresu_TURBO",
             "Folio_interno_TURBO",
             "NºPago_TURBO",
+            "Monto_TURBO",
             "tiempo_diferencia_SII",
             "esta_al_dia",
             "REFERENCIAS",
