@@ -340,6 +340,7 @@ class GeneradorPlanillaFinanzas:
         )
 
         df_sumada["Folio"] = df_sumada["Folio"].astype(str).str.replace(".0", "", regex=False)
+        df_sumada["Monto"] = df_sumada["Monto"].astype("Int64")
 
         return df_sumada
 
