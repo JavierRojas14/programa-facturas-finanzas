@@ -1,0 +1,10 @@
+name: facturas-int
+channels:
+  - defaults
+dependencies:
+  - numpy
+  - pandas
+  - python
+  - xlrd
+  - openpyxl
+prefix: C:\Users\javie\anaconda3\envs\facturas-int
