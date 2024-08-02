@@ -129,4 +129,10 @@ dmypy.json
 .pyre/
 
 crudos/
+settings.json
+
+*.csv
+*.xlsx
+*.xls
 .DS_Store
+prueba.ipynb

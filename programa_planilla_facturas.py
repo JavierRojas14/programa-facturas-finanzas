@@ -2,14 +2,77 @@
 Este es un programa para generar la planilla de Control de Facturas. Unidad de Finanzas.
 Javier Rojas Benítez
 """
+
 import time
 import datetime
 import json
 import os
+import glob
 
 import pandas as pd
+import numpy as np
 
 pd.options.mode.chained_assignment = None  # default='warn'
+
+COLUMNAS_SII_REGISTRO_O_NO_INCLUIR = {
+    "Tipo Doc": int,
+    "RUT Proveedor": str,
+    "Razon Social": str,
+    "Folio": int,
+    "Fecha Docto": str,
+    "Fecha Recepcion": str,
+    "Fecha Acuse": str,
+    "Monto Exento": "Int64",
+    "Monto Neto": "Int64",
+    "Monto IVA Recuperable": "Int64",
+    "Monto Total": "Int64",
+}
+
+COLUMNAS_SII_PENDIENTES = {
+    "Tipo Doc": int,
+    "RUT Proveedor": str,
+    "Razon Social": str,
+    "Folio": int,
+    "Fecha Docto": str,
+    "Fecha Recepcion": str,
+    "Monto Exento": "Int64",
+    "Monto Neto": "Int64",
+    "Monto IVA Recuperable": "Int64",
+    "Monto Total": "Int64",
+}
+
+COLUMNAS_SII_RECLAMADAS = {
+    "Tipo Doc": int,
+    "RUT Proveedor": str,
+    "Razon Social": str,
+    "Folio": int,
+    "Fecha Docto": str,
+    "Fecha Recepcion": str,
+    "Fecha Reclamo": str,
+    "Monto Exento": "Int64",
+    "Monto Neto": "Int64",
+    "Monto IVA Recuperable": "Int64",
+    "Monto Total": "Int64",
+}
+
+
+COLUMNAS_ACEPTA = {
+    "tipo": int,
+    "folio": int,
+    "emisor": str,
+    "publicacion": str,
+    "estado_acepta": str,
+    "estado_sii": str,
+    "referencias": str,
+    "estado_nar": str,
+    "estado_devengo": str,
+    "folio_oc": str,
+    "folio_rc": str,
+    "fecha_ingreso_rc": str,
+    "folio_sigfe": "Int64",
+    "tarea_actual": str,
+    "estado_cesion": str,
+}
 
 
 class GeneradorPlanillaFinanzas:
@@ -66,6 +129,7 @@ class GeneradorPlanillaFinanzas:
         )
 
         self.guardar_dfs(facturas_con_columnas_necesarias, leer)
+        print(f"La planilla final tiene {facturas_con_columnas_necesarias.shape[0]} documentos.")
 
         print("\nListo! No hubo ningún problema")
         print(f"--- {round(time.time() - start_time, 1)} seconds ---")
@@ -96,7 +160,7 @@ class GeneradorPlanillaFinanzas:
         for base_de_datos, lista_archivos in archivos_a_leer.items():
             print(f"Leyendo {base_de_datos}")
             if base_de_datos == "ACEPTA":
-                df_sumada = self.leer_acepta(lista_archivos)
+                df_sumada = self.leer_acepta()
 
             elif base_de_datos == "OBSERVACIONES":
                 df_sumada = self.leer_observaciones(lista_archivos)
@@ -108,7 +172,8 @@ class GeneradorPlanillaFinanzas:
                 df_sumada = self.leer_sigfe(lista_archivos)
 
             elif base_de_datos == "SII":
-                df_sumada = self.leer_sii(lista_archivos)
+                df_sumada = self.leer_sii()
+                print(f"\nSII tiene {df_sumada.shape[0]} documentos totales\n")
 
             elif base_de_datos == "TURBO":
                 df_sumada = self.leer_turbo(lista_archivos)
@@ -129,15 +194,19 @@ class GeneradorPlanillaFinanzas:
 
         return diccionario_base_de_datos
 
-    def leer_acepta(self, lista_archivos):
-        dfs = map(pd.read_excel, lista_archivos)
-        df_sumada = pd.concat(dfs)
-        df_sumada = df_sumada.rename(columns={"emisor": "RUT Emisor", "folio": "Folio"})
+    def leer_acepta(self):
+        acepta_unido = pd.concat(
+            (
+                pd.read_excel(archivo, usecols=list(COLUMNAS_ACEPTA.keys()), dtype=COLUMNAS_ACEPTA)
+                for archivo in glob.glob("crudos/base_de_datos_facturas/ACEPTA/*.xls")
+            )
+        )
+        acepta_unido = acepta_unido.rename(columns={"emisor": "RUT Emisor", "folio": "Folio"})
 
-        return df_sumada
+        return acepta_unido
 
     def leer_observaciones(self, lista_archivos):
-        dfs = map(lambda x: pd.read_csv(x, encoding="latin-1", delimiter=";"), lista_archivos)
+        dfs = map(lambda x: pd.read_csv(x, encoding="utf-8", delimiter=";"), lista_archivos)
         df_sumada = pd.concat(dfs)
         df_sumada = df_sumada[["RUT_Emisor_SII", "Folio_SII", "OBSERVACION_OBSERVACIONES"]]
         df_sumada = df_sumada.rename(
@@ -200,23 +269,66 @@ class GeneradorPlanillaFinanzas:
 
         return df_sumada
 
-    def leer_sii(self, lista_archivos):
-        dfs = map(lambda x: pd.read_csv(x, delimiter=";", index_col=False), lista_archivos)
-
-        dfs = map(
-            lambda x: x.drop(columns=["Tabacos Puros", "Tabacos Cigarrillos", "Tabacos Elaborados"])
-            if len(x.columns) == 27
-            else x,
-            dfs,
+    def lector_csv_sii(self, archivo, tipo_datos):
+        return pd.read_csv(
+            archivo,
+            delimiter=";",
+            index_col=False,
+            usecols=list(tipo_datos.keys()),
+            dtype=tipo_datos,
         )
 
-        df_sumada = pd.concat(dfs).rename(columns={"RUT Proveedor": "RUT Emisor"})
+    def leer_sii(self):
+        # Define ruta de archivos a leer
+        registro = glob.glob("crudos/base_de_datos_facturas/SII/*REGISTRO*.csv")
+        no_incluir = glob.glob("crudos/base_de_datos_facturas/SII/*NO_INCLUIR*.csv")
+        pendientes = glob.glob("crudos/base_de_datos_facturas/SII/*PENDIENTE*.csv")
+        reclamados = glob.glob("crudos/base_de_datos_facturas/SII/*RECLAMADO*.csv")
+
+        # Renombra Fecha Acuse a Fecha de Reclamo (6 de ~74000 documentos tienen registros)
+        df_registro = (
+            self.lector_csv_sii(archivo, COLUMNAS_SII_REGISTRO_O_NO_INCLUIR) for archivo in registro
+        )
+        df_registro = pd.concat(df_registro).rename(columns={"Fecha Acuse": "Fecha Reclamo"})
+        # df_registro["tipo"] = "registro"
+
+        # Renombra Fecha Acuse a Fecha de Reclamo (Ninguna tiene un valor)
+        df_no_incluir = (
+            self.lector_csv_sii(archivo, COLUMNAS_SII_REGISTRO_O_NO_INCLUIR)
+            for archivo in no_incluir
+        )
+        df_no_incluir = pd.concat(df_no_incluir).rename(columns={"Fecha Acuse": "Fecha Reclamo"})
+        # df_no_incluir["tipo"] = "no_incluir"
+
+        # Agrega la columna Fecha de Reclamo para alinear dfs
+        df_pendientes = (
+            self.lector_csv_sii(archivo, COLUMNAS_SII_PENDIENTES) for archivo in pendientes
+        )
+        df_pendientes = pd.concat(df_pendientes)
+        df_pendientes.insert(8, "Fecha Reclamo", np.nan)
+        # df_pendientes["tipo"] = "pendientes"
+
+        # Se mantiene el archivo como esta
+        df_reclamados = (
+            self.lector_csv_sii(archivo, COLUMNAS_SII_RECLAMADAS) for archivo in reclamados
+        )
+        df_reclamados = pd.concat(df_reclamados)
+        # df_reclamados["tipo"] = "reclamados"
+
+        # Une todos los tipos de documentos luego de alinear todos los dfs
+        df_sumada = pd.concat([df_registro, df_no_incluir, df_pendientes, df_reclamados])
+        df_sumada = df_sumada.rename(columns={"RUT Proveedor": "RUT Emisor"})
+
+        # Pone Notas de Credito/Debito en negativo
+        COLUMNAS_NEGATIVAS = ["Monto Exento", "Monto Neto", "Monto IVA Recuperable", "Monto Total"]
         mask_negativas = (df_sumada["Tipo Doc"] == 61) | (df_sumada["Tipo Doc"] == 56)
-        columnas_negativas = ["Monto Exento", "Monto Neto", "Monto IVA Recuperable", "Monto Total"]
-
-        df_sumada.loc[mask_negativas, columnas_negativas] = (
-            df_sumada.loc[mask_negativas, columnas_negativas] * -1
+        df_sumada.loc[mask_negativas, COLUMNAS_NEGATIVAS] = (
+            df_sumada.loc[mask_negativas, COLUMNAS_NEGATIVAS] * -1
         )
+
+        # Elimina documentos duplicados con mismo tipo de doc, rut y folio (casos de facturas en
+        # pendientes y registro)
+        df_sumada = df_sumada.drop_duplicates(subset=["Tipo Doc", "RUT Emisor", "Folio"])
 
         return df_sumada
 
@@ -269,7 +381,7 @@ class GeneradorPlanillaFinanzas:
         return df_sumada
 
     def leer_ley_de_presupuestos(self, lista_archivos):
-        dfs = map(lambda x: pd.read_excel(x), lista_archivos)
+        dfs = map(pd.read_excel, lista_archivos)
         df_sumada = pd.concat(dfs)
 
         return df_sumada
@@ -282,7 +394,7 @@ class GeneradorPlanillaFinanzas:
         - El orden en que se agregan las bases de datos es: SII -> ACEPTA -> OBSERVACIONES -> SCI
         -> SIGFE -> TURBO
         """
-        print("\nUniendo todas las bases de dato!")
+        print("\nUniendo todas las bases de datos!")
         df_sii = diccionario_dfs_limpias.pop("SII")
         lista_dfs_secuenciales = list(diccionario_dfs_limpias.values())
 
@@ -303,13 +415,17 @@ class GeneradorPlanillaFinanzas:
         print("Calculando los 8 días de las facturas!")
         mask_no_devengadas = pd.isna(df_unida["Fecha_DEVENGO_SIGFE"])
 
-        df_unida["Fecha_Docto_SII"] = pd.to_datetime(df_unida["Fecha_Docto_SII"], dayfirst=True)
-
-        df_unida["Fecha_Recepcion_SII"] = pd.to_datetime(
-            df_unida["Fecha_Recepcion_SII"], dayfirst=True
+        df_unida["Fecha_Docto_SII"] = pd.to_datetime(
+            df_unida["Fecha_Docto_SII"], dayfirst=True, format="mixed"
         )
 
-        df_unida["Fecha_Reclamo_SII"] = pd.to_datetime(df_unida["Fecha_Reclamo_SII"], dayfirst=True)
+        df_unida["Fecha_Recepcion_SII"] = pd.to_datetime(
+            df_unida["Fecha_Recepcion_SII"], dayfirst=True, format="mixed"
+        )
+
+        df_unida["Fecha_Reclamo_SII"] = pd.to_datetime(
+            df_unida["Fecha_Reclamo_SII"], dayfirst=True, format="mixed"
+        )
 
         diferencia = (
             pd.to_datetime("today") - df_unida[mask_no_devengadas]["Fecha_Recepcion_SII"]
@@ -377,6 +493,7 @@ class GeneradorPlanillaFinanzas:
         # oc_pendientes_subt_22 = oc_pendientes[mask_subtitulo_22]
 
         print("Asociando Órdenes de Compra!")
+        df_junta["Concepto_Presupuesto_OC"] = ""
         for orden_compra in oc_sigfe["Número Documento"].unique():
             if not (orden_compra in ["2022", "2"]):
                 mask_oc_sigfe = oc_sigfe["Número Documento"] == orden_compra
@@ -406,7 +523,7 @@ class GeneradorPlanillaFinanzas:
         facturas_con_maestro_articulos = pd.merge(
             tmp,
             df_maestro_art,
-            how="inner",
+            how="left",
             left_on="Codigo_Articulo_SCI",
             right_on="Código_MAESTRO_ARTICULOS",
         )
@@ -429,7 +546,7 @@ class GeneradorPlanillaFinanzas:
         facturas_con_ley_presupuesto = pd.merge(
             tmp,
             ley_presupuesto,
-            how="inner",
+            how="left",
             left_on="Items_MAESTRO_ARTICULOS",
             right_on="Numero_Concepto_LEY_PRESUPUESTO",
         )
@@ -523,7 +640,7 @@ class GeneradorPlanillaFinanzas:
 
         if periodo_a_guardar != "historico":
             df_historico = pd.read_csv(
-                "control_facturas_historico.csv", sep=";", encoding="latin-1", low_memory=False
+                "control_facturas_historico.csv", sep=";", encoding="utf-8", low_memory=False
             )
             concatenado = pd.concat([df_historico, df_columnas_utiles])
             concatenado = concatenado.drop_duplicates(subset="llave_id", keep="last")
@@ -531,7 +648,7 @@ class GeneradorPlanillaFinanzas:
                 "control_facturas_historico.csv",
                 sep=";",
                 decimal=",",
-                encoding="latin-1",
+                encoding="utf-8",
                 index=False,
             )
 
@@ -542,7 +659,7 @@ class GeneradorPlanillaFinanzas:
                 "control_facturas_historico.csv",
                 sep=";",
                 decimal=",",
-                encoding="latin-1",
+                encoding="utf-8",
                 index=False,
             )
             for año in df_columnas_utiles["Fecha_Docto_SII"].dt.year.unique():
@@ -557,7 +674,7 @@ class GeneradorPlanillaFinanzas:
             f"crudos\\base_de_datos_facturas\\OBSERVACIONES\\{nombre_archivo}",
             sep=";",
             decimal=",",
-            encoding="latin-1",
+            encoding="utf-8",
             index=False,
         )
 
