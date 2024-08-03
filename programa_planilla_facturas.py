@@ -449,32 +449,32 @@ class GeneradorPlanillaFinanzas:
         agregarlas a la columna REFERENCIAS
         """
         print("Referenciando las Notas de Crédito...")
-        mask_notas_credito = df_izquierda["Tipo_Doc_SII"] == 61
-        notas_credito_refs = df_izquierda[mask_notas_credito]["referencias_ACEPTA"]
-        referencias_nc = notas_credito_refs.apply(
-            lambda x: self.extraer_referencia_de_nc_de_json(x) if isinstance(x, str) else None
+        tmp = df_izquierda.copy().reset_index()
+        # Obtiene Notas de Creditos, y elimina las que no tengan una referencia
+        referencias_nc = tmp.query("Tipo_Doc_SII == 61")["referencias_ACEPTA"].dropna()
+        referencias_facturas_validas = referencias_nc.apply(self.extraer_referencia_de_nc_de_json)
+
+        # Agrega las referencias de documentos 33 como columna, y elimina los 0 iniciales
+        tmp["referencias_a_facturas"] = referencias_facturas_validas.str.lstrip("0")
+        tmp["referencias_a_facturas"] = tmp["RUT_Emisor_SII"] + tmp["referencias_a_facturas"]
+
+        # Une las referencias de las NC con sus facturas originales
+        referencias_a_nc = tmp.merge(
+            tmp, how="inner", left_on="llave_id", right_on="referencias_a_facturas"
+        )["llave_id_y"]
+
+        tmp["referencias_a_nc"] = referencias_a_nc
+
+        # Consolida ambas referencias cruzadas en una unica columna
+        tmp["referencias_a_facturas"] = tmp["referencias_a_facturas"].fillna("")
+        tmp["referencias_a_nc"] = tmp["referencias_a_nc"].fillna("")
+        tmp["REFERENCIAS"] = (
+            ">FE: " + tmp["referencias_a_facturas"] + "\n>NC: " + tmp["referencias_a_nc"]
         )
-        df_izquierda["REFERENCIAS"] = referencias_nc
+        tmp.to_csv("unidas.csv")
+        exit()
 
-        nc_con_referencias = df_izquierda[df_izquierda["REFERENCIAS"].notna()]
-        llaves_nc = nc_con_referencias["RUT_Emisor_SII"] + nc_con_referencias["REFERENCIAS"]
-
-        df_izquierda["LLAVES_REFERENCIAS_PARA_NC"] = llaves_nc
-
-        df_izquierda["REFERENCIAS"] = "FE " + df_izquierda[mask_notas_credito]["REFERENCIAS"]
-
-        for referencia in df_izquierda["LLAVES_REFERENCIAS_PARA_NC"].unique():
-            if not isinstance(referencia, float):
-                nota_c = df_izquierda.query("LLAVES_REFERENCIAS_PARA_NC == @referencia").index[0]
-                nota_c = nota_c.split("-")[1][1:]
-                nota_c = f"NC {nota_c}"
-
-                mask_boletas_referenciadas = df_izquierda.index == referencia
-                df_izquierda.loc[mask_boletas_referenciadas, "REFERENCIAS"] = nota_c
-
-        df_izquierda = df_izquierda.drop(columns="LLAVES_REFERENCIAS_PARA_NC")
-
-        return df_izquierda
+        return tmp
 
     def extraer_referencia_de_nc_de_json(self, string_json):
         """
