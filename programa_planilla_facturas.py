@@ -449,6 +449,7 @@ class GeneradorPlanillaFinanzas:
         agregarlas a la columna REFERENCIAS
         """
         print("Referenciando las Notas de Crédito...")
+        # Copia la base de datos original, y resetea el indice para unir por la llave_id
         tmp = df_izquierda.copy().reset_index()
         # Obtiene Notas de Creditos, y elimina las que no tengan una referencia
         referencias_nc = tmp.query("Tipo_Doc_SII == 61")["referencias_ACEPTA"].dropna()
@@ -471,8 +472,9 @@ class GeneradorPlanillaFinanzas:
         tmp["REFERENCIAS"] = (
             ">FE: " + tmp["referencias_a_facturas"] + "\n>NC: " + tmp["referencias_a_nc"]
         )
-        tmp.to_csv("unidas.csv")
-        exit()
+
+        # Vuelve a poner el indice como la llave_id
+        tmp = tmp.set_index("llave_id")
 
         return tmp
 
