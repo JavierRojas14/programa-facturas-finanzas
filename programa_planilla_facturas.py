@@ -116,6 +116,7 @@ class GeneradorPlanillaFinanzas:
 
         facturas_cumplen_tiempo = self.calcular_tiempo_8_dias(facturas_unidas)
         facturas_con_ref_nc = self.obtener_referencias_nc(facturas_cumplen_tiempo)
+        facturas_con_ref_nc = facturas_con_ref_nc.reset_index()
         facturas_con_oc = self.asociar_saldo_de_oc(facturas_con_ref_nc, oc_limpias["SIGFE_REPORTS"])
         facturas_con_maestro_articulos = self.asociar_maestro_articulos(
             facturas_con_oc, articulos["MAESTRO_ARTICULOS"]
@@ -514,7 +515,7 @@ class GeneradorPlanillaFinanzas:
         ]
         ordenes_compra_validas = ordenes_compra_validas.query(
             "~`Número Documento`.isin(['2022', '2'])"
-        )
+        ).drop_duplicates("Número Documento")
 
         # Une las OC con el folio_oc_ACEPTA y el Numero del Documento
         tmp = tmp.merge(
