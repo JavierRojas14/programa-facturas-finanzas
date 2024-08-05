@@ -498,26 +498,33 @@ class GeneradorPlanillaFinanzas:
         # oc_pendientes = oc_sigfe.query('`Monto Disponible` > 0')
         # mask_subtitulo_22 = oc_pendientes['Concepto Presupuesto'].str[:2] == '22'
         # oc_pendientes_subt_22 = oc_pendientes[mask_subtitulo_22]
-
         print("Asociando Órdenes de Compra!")
-        df_junta["Concepto_Presupuesto_OC"] = ""
-        for orden_compra in oc_sigfe["Número Documento"].unique():
-            if not (orden_compra in ["2022", "2"]):
-                mask_oc_sigfe = oc_sigfe["Número Documento"] == orden_compra
-                datos_oc = oc_sigfe[mask_oc_sigfe]
-                monto_disponible = datos_oc["Monto Disponible"].iloc[0]
-                numero_compromiso = datos_oc["Folio"].iloc[0]
-                concepto_presupuesto = datos_oc["Concepto Presupuesto"].iloc[0]
+        tmp = df_junta.copy()
 
-                mask_oc_acepta = df_junta["folio_oc_ACEPTA"] == orden_compra
-                facturas_asociadas = df_junta[mask_oc_acepta]
+        # Filtra columnas utiles, y elimina las OC que su Numero de Documento sea 2022 o 2
+        ordenes_compra_validas = oc_sigfe[
+            ["Número Documento", "Monto Disponible", "Folio", "Concepto Presupuesto"]
+        ]
+        # Renombra nombres de columnas
+        ordenes_compra_validas.columns = [
+            "Número Documento",
+            "Monto_Disponible_OC",
+            "Numero_Compromiso_OC",
+            "Concepto_Presupuesto_OC",
+        ]
+        ordenes_compra_validas = ordenes_compra_validas.query(
+            "~`Número Documento`.isin(['2022', '2'])"
+        )
 
-                if not facturas_asociadas.empty:
-                    df_junta.loc[mask_oc_acepta, "Numero_Compromiso_OC"] = numero_compromiso
-                    df_junta.loc[mask_oc_acepta, "Monto_Disponible_OC"] = monto_disponible
-                    df_junta.loc[mask_oc_acepta, "Concepto_Presupuesto_OC"] = concepto_presupuesto
+        # Une las OC con el folio_oc_ACEPTA y el Numero del Documento
+        tmp = tmp.merge(
+            ordenes_compra_validas,
+            how="left",
+            left_on="folio_oc_ACEPTA",
+            right_on="Número Documento",
+        )
 
-        return df_junta
+        return tmp
 
     def asociar_maestro_articulos(self, df_junta, df_maestro_articulo):
         print("Asociando con el Maestro Articulos")
