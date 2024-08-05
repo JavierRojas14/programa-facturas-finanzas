@@ -7,4 +7,5 @@ dependencies:
   - python
   - xlrd
   - openpyxl
+  - ipykernel
 prefix: C:\Users\javie\anaconda3\envs\facturas-int
