@@ -141,12 +141,19 @@ class GeneradorPlanillaFinanzas:
 
     def obtener_archivos(self, base_de_datos, leer):
         archivos_a_leer = {}
-        base_de_datos_a_leer = f"crudos\\base_de_datos_{base_de_datos}"
+        # Lee un tipo de documento, como facturas, OC o articulos
+        tipo_documento_a_leer = f"crudos/base_de_datos_{base_de_datos}"
 
-        for carpeta_base_de_datos in os.listdir(base_de_datos_a_leer):
+        # Lee todas las bases que estan dentro de ese tipo de documento
+        bases_de_tipo_documento = os.listdir(tipo_documento_a_leer)
+        bases_de_tipo_documento = [
+            element for element in bases_de_tipo_documento if not element.startswith(".")
+        ]
+
+        for carpeta_base_de_datos in bases_de_tipo_documento:
             archivos_a_leer[carpeta_base_de_datos] = []
-            for archivo in os.listdir(os.path.join(base_de_datos_a_leer, carpeta_base_de_datos)):
-                ruta_archivo = os.path.join(base_de_datos_a_leer, carpeta_base_de_datos, archivo)
+            for archivo in os.listdir(os.path.join(tipo_documento_a_leer, carpeta_base_de_datos)):
+                ruta_archivo = os.path.join(tipo_documento_a_leer, carpeta_base_de_datos, archivo)
                 archivos_a_leer[carpeta_base_de_datos].append(ruta_archivo)
 
         hoy = datetime.date.today()
