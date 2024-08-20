@@ -477,9 +477,27 @@ class GeneradorPlanillaFinanzas:
         # Consolida ambas referencias cruzadas en una unica columna
         tmp["referencias_a_facturas"] = tmp["referencias_a_facturas"].fillna("")
         tmp["referencias_a_nc"] = tmp["referencias_a_nc"].fillna("")
-        tmp["REFERENCIAS"] = (
-            ">FE: " + tmp["referencias_a_facturas"] + "\n>NC: " + tmp["referencias_a_nc"]
-        )
+
+        # Elimina referencias vacias, quita el RUT y agrega indicador de Factura Electronica (FE)
+        referencias_a_facturas = tmp["referencias_a_facturas"].dropna()
+        referencias_a_facturas = referencias_a_facturas.str.split("-").str[1].str[1:]
+        referencias_a_facturas = "FE: " + referencias_a_facturas
+
+        # Elimina referencias a NC, quita el RUT y agrega indicador de Nota de Credito (NC)
+        referencias_a_nc = tmp["referencias_a_nc"].dropna()
+        referencias_a_nc = referencias_a_nc.str.split("-").str[1].str[1:]
+        referencias_a_nc = " NC: " + referencias_a_nc
+
+        # Vuelve a agregar las referencias formateadas
+        tmp["referencias_a_facturas"] = referencias_a_facturas
+        tmp["referencias_a_nc"] = referencias_a_nc
+
+        # Llena espacios vacios de referencias, para poder sumar ambas columnas
+        tmp["referencias_a_facturas"] = tmp["referencias_a_facturas"].fillna("")
+        tmp["referencias_a_nc"] = tmp["referencias_a_nc"].fillna("")
+
+        # Consolida referencias de FE y NC en una unica columna
+        tmp["REFERENCIAS"] = tmp["referencias_a_facturas"] + tmp["referencias_a_nc"]
 
         # Vuelve a poner el indice como la llave_id
         tmp = tmp.set_index("llave_id")
