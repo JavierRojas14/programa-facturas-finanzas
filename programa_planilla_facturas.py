@@ -3,14 +3,14 @@ Este es un programa para generar la planilla de Control de Facturas. Unidad de F
 Javier Rojas Benítez
 """
 
-import time
 import datetime
+import glob
 import json
 import os
-import glob
+import time
 
-import pandas as pd
 import numpy as np
+import pandas as pd
 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -730,5 +730,6 @@ class GeneradorPlanillaFinanzas:
         )
 
 
-programa = GeneradorPlanillaFinanzas()
-programa.correr_programa()
+if __name__ == "__main__":
+    programa = GeneradorPlanillaFinanzas()
+    programa.correr_programa()
